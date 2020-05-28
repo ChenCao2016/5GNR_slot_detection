@@ -68,8 +68,8 @@ class UL_DMRS:
     def lowPAPRsequence(self,Mzc,u,v):
 
         Nzc = (PRIME_NUMBER[PRIME_NUMBER < Mzc])[-1]
-        q = Nz*(u + 1) / 31
-        q = int(q + 0.5) + v*(-1)**int(q << 1)
+        q = Nzc*(u + 1) / 31
+        q = int(q + 0.5) + v*(-1)**int(2*q)
 
         m = np.array(range(Nzc))
 
