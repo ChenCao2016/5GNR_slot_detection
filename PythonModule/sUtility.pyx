@@ -1,11 +1,17 @@
+#signal processing utilities, use cython to build
 
 import scipy.signal as signal
 import numpy as np
 cimport numpy as np
 cimport cython
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
+@cython.boundscheck(False)
+@cython.wraparound(False)  
 
+#self_correlate: correlation of two segments in data with an interval 
+#data: input complex signal
+#cLength: segment length
+#cInterval: interval between two segment
+#normalize: normalize with first segment self-correlation
 def self_correlate(np.ndarray[np.complex_t, ndim = 1] data, long cLength, long cInterval, normalize = False):
 
     cdef long rlength = data.shape[0] - cInterval - cLength
