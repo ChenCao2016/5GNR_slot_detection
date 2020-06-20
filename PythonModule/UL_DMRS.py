@@ -122,6 +122,19 @@ class UL_DMRS:
 
         return subc
 
+    #Map ifft result subcarrier to RE
+    def ifillShift(self,subc,fftSize,maxRb,rbNum,rbOffset):
+        
+        fillRE = np.zeros(12*maxRb, dtype = np.complex64)
+
+        fillRE[6*maxRb:12*maxRb] = subc[0:6*maxRb]
+        fillRE[0:6*maxRb] = subc[(fftSize-6*maxRb):fftSize]
+
+        return fillRE[12*rbOffset:12*(rbOffset + rbNum)]
+
+
+
+
 
 #Example: numerology = 1, bandwidth = 100, CP-OFDM, numRB = 20, RBoffset = 22
 if __name__ == "__main__":
@@ -133,11 +146,11 @@ if __name__ == "__main__":
     slot = 0
     DMRSposition = 2
 
-    #RE value is always generated with max number RB 
-    RE = a.REvalue(maxNumRB,slot,DMRSposition)
+    #RE value should be always generated with max number RB 
+    RE = a.REvalue(12*maxNumRB,slot,DMRSposition)
 
     fftSize = 4096
     numRB = 20
     RBoffset = 22
 
-    subcarrier = a.fillShift(RB,fftSize,maxNumRB,numRB,RBoffset)
+    subcarrier = a.fillShift(RE,fftSize,maxNumRB,numRB,RBoffset)
