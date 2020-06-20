@@ -14,6 +14,8 @@ from sUtility import *
 from DMRSgeneration import *
 import NRparameters
 
+from measureLib import *
+
 
 if __name__ == "__main__":
 
@@ -24,7 +26,7 @@ if __name__ == "__main__":
         logger.start()
         lp = connect_tester("10.201.13.138")
         interface = IO(lp,logger)
-        lp.exec("CHAN1;VSA11;INIT;")
+        #lp.exec("CHAN1;VSA11;INIT;")
         lp.query("*WAI;ERR:ALL?")
         IQsample = interface.readIQsample(1)
         data = np.array(IQsample[1]) + 1j*np.array(IQsample[2])
@@ -95,7 +97,7 @@ if __name__ == "__main__":
 
     #---------------------------------------------------------------------
     # frequency offset estimation, resolution (-pi,pi)
-    
+
     cp_start = np.argmax(c[0:4096])
     phase_shift = np.multiply( data[cp_start:cp_start+p.normal_cp_sample], np.conj(data[cp_start + p.symbol_sample:cp_start+p.symbol_sample+p.normal_cp_sample]))
     phase_shift_ave = np.average(phase_shift)
@@ -122,12 +124,12 @@ if __name__ == "__main__":
     a.transformPrecoding = False
     a.N_Id_n_SCID = 0
 
-    result = []
 
     cFloor = []
     cRoof = []
+    slot = []
 
-    for i in range(20):
+    for i in range(p.slot_per_frame):
 
         #RE value should be always generated with max number RB 
         RE = a.REvalue(12*273,i,para.dmrsSymb)
@@ -139,24 +141,73 @@ if __name__ == "__main__":
         
         c = np.absolute(signal.correlate(data,refSignal,mode = 'valid'))/30
 
-        result.append(np.max(c))
         if np.max(c) > 0.7:
             cRoof.append(np.max(c))
+            slot.append(i)
             pyplot.plot(c[::])
         else:
             cFloor.append(np.max(c))
 
         print(str(i) + " : " +  str(np.max(c)))
-
-        start = np.argmax(c) - int(len(refSignal)/2)
-        end = start + len(refSignal)
-        refPart = data[start:end:]
-    
     
     handle1.show()
-    input()
-
     
 
+    #---------------------------------------------------------------------
+    # DMRS channel estimation
+    
+    RE = a.REvalue(12*273,slot[0],para.dmrsSymb) #RE value on constellation is unit power
 
+    reArrange = a.fillShift(RE,1<<para.FFTsizeExp,273,para.rbNum,0)
+
+    data  = (data - np.mean(data))/ np.std(data)
+    refSignal = ifft(reArrange)
+    c = np.absolute(signal.correlate(data,refSignal,mode = 'valid'))/30
+    symbol_start = np.argmax(c)
+    res = fft(data[symbol_start:symbol_start + p.symbol_sample]) 
+
+    DMRS_symbol = a.ifillShift(res,1<<para.FFTsizeExp,273,para.rbNum,0)
+
+    h = channel_estimate(DMRS_symbol, RE)
+    
+    handle2 = pyplot.figure()
+    pyplot.plot(np.angle(h))
+    handle2.show()
+
+    handle3 = pyplot.figure()
+    pyplot.plot(np.absolute(h),'-x')
+    handle3.show()
+
+
+    #---------------------------------------------------------------------
+    # DMRS symbol EVM
+
+    csymbol = DMRS_symbol/h
+
+    RE_cSymbol = csymbol[np.real(RE) != 0]
+    res = evm_estimate(RE_cSymbol,'QPSK')
+    handle3 = pyplot.figure()
+    pyplot.plot(res,'-x')
+    handle3.show()
+
+    print("RE EVM: " + str(np.average(res*100)) + "%")
+
+
+    Data_cSymbol = csymbol[np.real(RE) == 0]
+    res = evm_estimate(Data_cSymbol,'QAM')
+    handle3 = pyplot.figure()
+    pyplot.plot(res,'-x')
+    handle3.show()
+
+    print("data EVM: " + str(np.average(res*100)) + "%")
+
+
+    handle4 = pyplot.figure()
+    pyplot.scatter(np.real(csymbol),np.imag(csymbol))
+    pyplot.scatter(np.real(CONSTELLATION['QPSK']),np.imag(CONSTELLATION['QPSK']))
+    pyplot.scatter(np.real(CONSTELLATION['QAM']),np.imag(CONSTELLATION['QAM']))
+    handle4.show()
+
+
+    input()
 
