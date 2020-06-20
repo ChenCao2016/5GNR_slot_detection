@@ -1,17 +1,13 @@
-#signal processing utilities, use cython to build
 
 import scipy.signal as signal
+import array
 import numpy as np
 cimport numpy as np
 cimport cython
+from cython.parallel import prange
 @cython.boundscheck(False)
-@cython.wraparound(False)  
+@cython.wraparound(False)
 
-#self_correlate: correlation of two segments in data with an interval 
-#data: input complex signal
-#cLength: segment length
-#cInterval: interval between two segment
-#normalize: normalize with first segment self-correlation
 def self_correlate(np.ndarray[np.complex_t, ndim = 1] data, long cLength, long cInterval, normalize = False):
 
     cdef long rlength = data.shape[0] - cInterval - cLength
@@ -87,3 +83,43 @@ def self_correlate(np.ndarray[np.complex_t, ndim = 1] data, long cLength, long c
         corr = sumProduct
 
     return corr
+
+
+def least_find(np.ndarray[np.complex_t, ndim = 1] data, np.ndarray[np.complex_t, ndim = 1] candidate):
+
+    cdef int dSize = data.shape[0]
+    cdef int cSize = candidate.shape[0]
+
+    cdef float[::1] dReal = array.array('f',np.real(data))
+    cdef float[::1] dImage = array.array('f',np.imag(data))
+
+    cdef float[::1] cReal = array.array('f',np.real(candidate))
+    cdef float[::1] cImage = array.array('f',np.imag(candidate))
+
+    cdef float[::1] lReal = array.array('f',np.zeros(dSize,dtype = 'float'))
+    cdef float[::1] lImage = array.array('f',np.zeros(dSize,dtype = 'float'))
+
+    cdef double error = 999.9
+    cdef int error_index = 0
+
+    cdef float temp
+    cdef int i
+    cdef int j
+
+    with nogil:
+        for i in prange(dSize):
+            error = 999.9
+            with cython.boundscheck(False):
+                for j in range(cSize):
+                    temp = (dReal[i] - cReal[j])**2 + (dImage[i] - cImage[j])**2
+                    if error > temp:
+                        error = temp
+                        error_index = j
+
+                lReal[i] = cReal[error_index]
+                lImage[i] = cImage[error_index]
+
+            
+    cdef np.ndarray[np.complex_t, ndim = 1] result = np.array(lReal,dtype='complex') + 1j*np.array(lImage,dtype='complex')
+
+    return result
