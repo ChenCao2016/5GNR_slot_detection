@@ -1,8 +1,8 @@
-
 class unit:
 
     freq_base = 480000
     time_base = 64
+    sc_per_rb = 12
 
     symbol_per_slot = 14
 
