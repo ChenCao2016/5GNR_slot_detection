@@ -54,6 +54,8 @@ if __name__ == "__main__":
         dmrsSymb = 3
         numerology = 3
         rbNum = 66
+        rbOffset = 0
+        maxRb = 66
         FFTsizeExp = 10
         waveformSamplingRate = 2457600000
         scs = (1<<numerology) * 15000
@@ -63,7 +65,9 @@ if __name__ == "__main__":
     class para:
         dmrsSymb = 3
         numerology = 1
-        rbNum = 273
+        rbNum = 12
+        rbOffset = 0
+        maxRb = 273
         FFTsizeExp = 12
         waveformSamplingRate = 240000000
         scs = (1<<numerology) * 15000
@@ -98,10 +102,16 @@ if __name__ == "__main__":
     #---------------------------------------------------------------------
     # frequency offset estimation, resolution (-pi,pi)
 
-    cp_start = np.argmax(c[0:4096])
-    phase_shift = np.multiply( data[cp_start:cp_start+p.normal_cp_sample], np.conj(data[cp_start + p.symbol_sample:cp_start+p.symbol_sample+p.normal_cp_sample]))
-    phase_shift_ave = np.average(phase_shift)
-    freqOffset = np.angle(phase_shift_ave)/4096
+    freqOffset = 0
+    
+    for i in range(p.symbol_per_slot*2):
+
+        cp_start = np.argmax(c[i*(p.symbol_sample + p.normal_cp_sample): (i+1)*(p.symbol_sample + p.normal_cp_sample)])
+        phase_shift = np.multiply( data[cp_start:cp_start+p.normal_cp_sample], np.conj(data[cp_start + p.symbol_sample:cp_start+p.symbol_sample+p.normal_cp_sample]))
+        phase_shift_ave = np.average(phase_shift)
+        freqOffset = freqOffset + np.angle(phase_shift_ave)/p.symbol_sample
+
+    freqOffset = freqOffset/p.symbol_per_slot/2
 
     print("Estimated frequency offset: " + str(freqOffset/2/np.pi*para.expectedSamplingRate) + "Hz")
 
@@ -113,7 +123,7 @@ if __name__ == "__main__":
 
     phase_shift = np.multiply( data[cp_start:cp_start+p.normal_cp_sample], np.conj(data[cp_start + p.symbol_sample:cp_start+p.symbol_sample+p.normal_cp_sample]))
     phase_shift_ave = np.average(phase_shift)
-    freqOffset = np.angle(phase_shift_ave)/4096
+    freqOffset = np.angle(phase_shift_ave)/p.symbol_sample
 
     print("Frequency offset adjust: " + str(freqOffset/np.pi*para.expectedSamplingRate) + "Hz")
 
@@ -123,6 +133,7 @@ if __name__ == "__main__":
     a = UL_DMRS()
     a.transformPrecoding = False
     a.N_Id_n_SCID = 0
+    a.antenna_port = 0
 
 
     cFloor = []
@@ -132,14 +143,14 @@ if __name__ == "__main__":
     for i in range(p.slot_per_frame):
 
         #RE value should be always generated with max number RB 
-        RE = a.REvalue(12*273,i,para.dmrsSymb)
+        RE = a.REvalue(p.sc_per_rb*para.maxRb,i,para.dmrsSymb)
 
-        reArrange = a.fillShift(RE,1<<para.FFTsizeExp,273,para.rbNum,0)
+        reArrange = a.fillShift(RE,1<<para.FFTsizeExp,para.maxRb,para.rbNum,para.rbOffset)
 
         data  = (data - np.mean(data))/ np.std(data)
         refSignal = ifft(reArrange)
         
-        c = np.absolute(signal.correlate(data,refSignal,mode = 'valid'))/30
+        c = np.absolute(signal.correlate(data,refSignal,mode = 'valid'))/30*(273/12/4)
 
         if np.max(c) > 0.7:
             cRoof.append(np.max(c))
@@ -156,19 +167,20 @@ if __name__ == "__main__":
     #---------------------------------------------------------------------
     # DMRS channel estimation
     
-    RE = a.REvalue(12*273,slot[0],para.dmrsSymb) #RE value on constellation is unit power
+    RE = a.REvalue(p.sc_per_rb*para.maxRb,slot[0],para.dmrsSymb) #RE value on constellation is unit power
 
-    reArrange = a.fillShift(RE,1<<para.FFTsizeExp,273,para.rbNum,0)
+    reArrange = a.fillShift(RE,1<<para.FFTsizeExp,para.maxRb,para.rbNum,para.rbOffset)
 
     data  = (data - np.mean(data))/ np.std(data)
     refSignal = ifft(reArrange)
     c = np.absolute(signal.correlate(data,refSignal,mode = 'valid'))/30
     symbol_start = np.argmax(c)
+    
     res = fft(data[symbol_start:symbol_start + p.symbol_sample]) 
 
-    DMRS_symbol = a.ifillShift(res,1<<para.FFTsizeExp,273,para.rbNum,0)
+    DMRS_symbol = a.ifillShift(res,1<<para.FFTsizeExp,para.maxRb,para.rbNum,para.rbOffset)
 
-    h = channel_estimate(DMRS_symbol, RE)
+    h = channel_estimate(DMRS_symbol, RE, para.rbNum, para.rbOffset)
     
     handle2 = pyplot.figure()
     pyplot.plot(np.angle(h))
@@ -182,32 +194,71 @@ if __name__ == "__main__":
     #---------------------------------------------------------------------
     # DMRS symbol EVM
 
-    csymbol = DMRS_symbol/h
+    # csymbol = DMRS_symbol/h
 
-    RE_cSymbol = csymbol[np.real(RE) != 0]
-    res = evm_estimate(RE_cSymbol,'QPSK')
-    handle3 = pyplot.figure()
-    pyplot.plot(res,'-x')
-    handle3.show()
+    # RE_cSymbol = csymbol[np.real(RE) != 0]
+    # res = evm_estimate(RE_cSymbol,'QPSK')
+    # handle3 = pyplot.figure()
+    # pyplot.plot(res,'-x')
+    # handle3.show()
 
-    print("RE EVM: " + str(np.average(res*100)) + "%")
-
-
-    Data_cSymbol = csymbol[np.real(RE) == 0]
-    res = evm_estimate(Data_cSymbol,'QAM')
-    handle3 = pyplot.figure()
-    pyplot.plot(res,'-x')
-    handle3.show()
-
-    print("data EVM: " + str(np.average(res*100)) + "%")
+    # print("RE EVM: " + str(np.average(res*100)) + "%")
 
 
-    handle4 = pyplot.figure()
-    pyplot.scatter(np.real(csymbol),np.imag(csymbol))
-    pyplot.scatter(np.real(CONSTELLATION['QPSK']),np.imag(CONSTELLATION['QPSK']))
-    pyplot.scatter(np.real(CONSTELLATION['QAM']),np.imag(CONSTELLATION['QAM']))
-    handle4.show()
+    # Data_cSymbol = csymbol[np.real(RE) == 0]
+    # res = evm_estimate(Data_cSymbol,'QAM')
+    # handle3 = pyplot.figure()
+    # pyplot.plot(res,'-x')
+    # handle3.show()
 
+    # print("data EVM: " + str(np.average(res*100)) + "%")
+
+    # handle4 = pyplot.figure()
+    # pyplot.scatter(np.real(csymbol),np.imag(csymbol))
+    # pyplot.scatter(np.real(CONSTELLATION['QPSK']),np.imag(CONSTELLATION['QPSK']))
+    # pyplot.scatter(np.real(CONSTELLATION['QAM']),np.imag(CONSTELLATION['QAM']))
+    # handle4.show()
+
+    #-------------------------------------------------------------------------
+    # all symbol EVM
+
+    evm_all = []
+
+    for index in range(p.symbol_per_slot):
+
+        index_offset = index - para.dmrsSymb
+
+        data_symbol_start = symbol_start + (p.symbol_sample + p.normal_cp_sample) * index_offset   # next symbol
+
+        print(data_symbol_start)
+
+        res = fft(data[data_symbol_start:data_symbol_start + p.symbol_sample]) 
+
+        data_symbol = a.ifillShift(res,1<<para.FFTsizeExp,para.maxRb,para.rbNum,para.rbOffset)
+
+        csymbol = data_symbol/h
+
+        res = evm_estimate(csymbol,['64QAM','QPSK'])
+        evm_all.append(np.copy(res))
+
+        print("symbol " + str(index) + " data EVM: " + str(np.average(res*100)) + "%")
+
+        # handle3 = pyplot.figure()
+        # pyplot.plot(res,'-x')
+        # handle3.show()
+        # handle4 = pyplot.figure()
+        # pyplot.scatter(np.real(csymbol),np.imag(csymbol))
+        # handle4.show()
+
+    handle1 = pyplot.figure()
+    pyplot.subplot(211)
+    cs = pyplot.contourf(np.array(evm_all))
+    pyplot.subplot(212)
+    cs = pyplot.contourf(10*np.log10(np.abs(np.array(evm_all))))
+    pyplot.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
+    cax = pyplot.axes([0.85, 0.1, 0.03, 0.8])       
+    pyplot.colorbar(cax=cax)
+    pyplot.grid(True)
+    handle1.show()
 
     input()
-
