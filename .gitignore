@@ -1,2 +1,9 @@
 
 *.json
+PythonModule/build/lib.win-amd64-3.7/sUtility.cp37-win_amd64.pyd
+PythonModule/build/temp.win-amd64-3.7/Release/sUtility.cp37-win_amd64.exp
+PythonModule/build/temp.win-amd64-3.7/Release/sUtility.cp37-win_amd64.lib
+PythonModule/build/temp.win-amd64-3.7/Release/sUtility.obj
+PythonModule/sUtility.c
+PythonModule/sUtility.cp37-win_amd64.pyd
+PythonModule/sUtility.html
