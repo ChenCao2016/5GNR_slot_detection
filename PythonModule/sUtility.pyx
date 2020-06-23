@@ -10,7 +10,7 @@ from cython.parallel import prange
 
 def self_correlate(np.ndarray[np.complex_t, ndim = 1] data, long cLength, long cInterval, normalize = False):
 
-    cdef long rlength = data.shape[0] - cInterval - cLength
+    cdef long long rlength = data.shape[0] - cInterval - cLength
 
     if rlength <= 0:
         raise Exception("data size is shorter than correlation length")
@@ -87,8 +87,8 @@ def self_correlate(np.ndarray[np.complex_t, ndim = 1] data, long cLength, long c
 
 def least_find(np.ndarray[np.complex_t, ndim = 1] data, np.ndarray[np.complex_t, ndim = 1] candidate):
 
-    cdef int dSize = data.shape[0]
-    cdef int cSize = candidate.shape[0]
+    cdef long long dSize = data.shape[0]
+    cdef long long cSize = candidate.shape[0]
 
     cdef float[::1] dReal = array.array('f',np.real(data))
     cdef float[::1] dImage = array.array('f',np.imag(data))
