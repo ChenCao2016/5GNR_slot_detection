@@ -20,10 +20,7 @@ if __name__ == "__main__":
 
     #-----------------------------------------------------------------
     # load data
-    #filename = "qcom_mu3_bw100_66@0.dat"
-    #filename = "0.dat"
-    #filename = "mu3_bw100_qpsk_tfpc0_rbo000_rbd066.dat"
-    filename = "waveform/mu1_CP_RB273_100MHz_240Mps.dat"
+    filename = configure.file_name
 
     f = open(filename, 'rb')
     packData = f.read()
@@ -220,8 +217,11 @@ if __name__ == "__main__":
 
     handle4 = pyplot.figure()
     pyplot.scatter(np.real(RE_cSymbol),np.imag(RE_cSymbol))
+    pyplot.scatter(np.real(Data_cSymbol),np.imag(Data_cSymbol))
     pyplot.scatter(np.real(CONSTELLATION['QPSK']),np.imag(CONSTELLATION['QPSK']))
     pyplot.scatter(np.real(CONSTELLATION[configure.modulation]),np.imag(CONSTELLATION[configure.modulation]))
+    pyplot.ylim(-2,+2)
+    pyplot.xlim(-2,+2)
     pyplot.title("DMRS symbol constellation")
     handle4.show()
 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
 
     evm_all = []
 
-    for index in range(1):
+    for index in range(2,3):
 
         index_offset = index - para.dmrsSymb
 
@@ -253,6 +253,8 @@ if __name__ == "__main__":
         handle4 = pyplot.figure()
         pyplot.grid()
         pyplot.scatter(np.real(csymbol),np.imag(csymbol))
+        pyplot.ylim(-2,+2)
+        pyplot.xlim(-2,+2)
         pyplot.title("symbol " + str(index) + " constellation")
         handle4.show()
 

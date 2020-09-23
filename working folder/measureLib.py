@@ -59,7 +59,7 @@ def channel_estimate(data,validRE,rbNum,rbOffset):
     tap = int(np.size(validRE)/np.size(validRE[np.absolute(validRE) == 0]))
 
     # A simple average filter
-    tapWin = 3
+    tapWin = 1
     L = int(tap * tapWin)
     b = np.ones(L) / tapWin
     a = [1]
@@ -81,7 +81,7 @@ def evm_estimate(data, cons):
 
     ex = least_find(data, icons)
     error = data - ex
-    res = np.real(error*np.conj(error))/np.real(ex*np.conj(ex))
+    res = np.sqrt(np.real(error*np.conj(error)))/np.sqrt(np.real(ex*np.conj(ex)))
 
     return res
 
