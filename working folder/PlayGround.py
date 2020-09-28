@@ -179,6 +179,8 @@ if __name__ == "__main__":
     pyplot.title("DMRS symbol spectrum")
     handle2.show()
 
+    #restrict RE to allocated RB allocations
+    RE = RE[12*para.rbOffset:12*(para.rbOffset + para.rbNum)]
     h = channel_estimate(DMRS_symbol, RE, para.rbNum, para.rbOffset)
     
     handle2 = pyplot.figure()
