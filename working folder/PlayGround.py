@@ -31,31 +31,6 @@ if __name__ == "__main__":
 
     #-------------------------------------------------------------------
     # parameters
-    # FR2 example
-    class para:
-        dmrsSymb = 3
-        numerology = 3
-        rbNum = 66
-        rbOffset = 0
-        maxRb = 66
-        FFTsizeExp = 10
-        waveformSamplingRate = 2457600000
-        scs = (1<<numerology) * 15000
-        expectedSamplingRate = scs << FFTsizeExp
-        samplingRateRatio = waveformSamplingRate/expectedSamplingRate
-    # FR1 example
-    class para:
-        dmrsSymb = 3
-        numerology = 1
-        rbNum = 12
-        rbOffset = 0
-        maxRb = 273
-        FFTsizeExp = 12
-        waveformSamplingRate = 240000000
-        scs = (1<<numerology) * 15000
-        expectedSamplingRate = scs << FFTsizeExp
-        samplingRateRatio = waveformSamplingRate/expectedSamplingRate
-
     class para:
         dmrsSymb = configure.dmrs_symbol
         numerology = configure.numerology
@@ -91,7 +66,7 @@ if __name__ == "__main__":
     print("self_correlation time: " + str(time.time()-start))
 
     handle1 = pyplot.figure()
-    pyplot.plot(c)
+    pyplot.plot(np.arange(len(c))/para.expectedSamplingRate*1e6,c)
 
     #---------------------------------------------------------------------
     # frequency offset estimation, resolution (-pi,pi)
@@ -138,7 +113,12 @@ if __name__ == "__main__":
 
     print("uplink DMRS correlation result:")
 
-    for i in range(p.slot_per_frame):
+    if configure.DFTs_OFDM:
+        slotNameRange = 1 # DFTs-OFDM DMRS symbol is independent of slot name
+    else:
+        slotNameRange = p.slot_per_frame # DFTs-OFDM DMRS symbol depends on slot name
+
+    for i in range(slotNameRange):
 
         RE = a.REvalue(para.maxRb,para.rbNum,i,para.dmrsSymb) #RE value on constellation is unit power
 
@@ -164,8 +144,10 @@ if __name__ == "__main__":
     refSignal = ifft(reArrange)
     c = np.absolute(signal.correlate(data,refSignal,mode = 'valid'))/30
 
-    pyplot.plot(c[::])
+    pyplot.plot(np.arange(len(c))/para.expectedSamplingRate*1e6,c)
     pyplot.title("uplink DMRS correlation result")
+    pyplot.grid()
+    pyplot.xlabel("Time (us)")
     handle1.show()
 
     symbol_start = np.argmax(c)
