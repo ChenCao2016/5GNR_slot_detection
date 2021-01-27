@@ -47,10 +47,7 @@ CONSTELLATION = {
 }
 
 
-def channel_estimate(data,validRE,rbNum,rbOffset):
-
-    # validRE = RE[12*rbOffset:12*(rbOffset + rbNum)]
-    # validRE = RE
+def channel_estimate(data,validRE):
     
     #only the REs in the current RB allocation
     assert np.size(data) == np.size(validRE)

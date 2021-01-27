@@ -14,7 +14,7 @@ import NRparameters
 from measureLib import *
 
 import configure
-
+from blocks import*
 
 if __name__ == "__main__":
 
@@ -22,11 +22,13 @@ if __name__ == "__main__":
     # load data
     filename = configure.file_name
 
-    f = open(filename, 'rb')
-    packData = f.read()
-    f.close()
-    IQsample = np.array(array.array('f',packData),dtype=np.complex)
-    data = np.add(IQsample[0::2], 1j*IQsample[1::2])
+    IQsampleIn1 = IQsampleIn()
+    IQsampleIn1.input.printInfo = True
+    IQsampleIn1.input.filename = filename
+    IQsampleIn1.run()
+
+    data = IQsampleIn1.output.data
+
     #-----------------------------------------------------------------
 
     #-------------------------------------------------------------------
@@ -53,8 +55,15 @@ if __name__ == "__main__":
 
     print("Ratio: " + str(para.samplingRateRatio))
     print("Sampling Rate: " + str(int(para.expectedSamplingRate)))
-    data = signal.resample(data, int(numSamples/para.samplingRateRatio))
-    print("Number of samples: " + str(np.size(data)))
+
+    reSampler1 = reSampler()
+    reSampler1.input.printInfo = True
+    reSampler1.input.targetRatio = para.expectedSamplingRate/para.waveformSamplingRate
+    reSampler1.input.data = data
+    reSampler1.run()
+    data = reSampler1.output.data 
+    # data = signal.resample(data, int(numSamples/para.samplingRateRatio))
+    # print("Number of samples: " + str(np.size(data)))
 
     #-------------------------------------------------------------------
     # CP self correlation
@@ -163,7 +172,7 @@ if __name__ == "__main__":
 
     #restrict RE to allocated RB allocations
     RE = RE[12*para.rbOffset:12*(para.rbOffset + para.rbNum)]
-    h = channel_estimate(DMRS_symbol, RE, para.rbNum, para.rbOffset)
+    h = channel_estimate(DMRS_symbol, RE)
     
     handle2 = pyplot.figure()
     pyplot.plot(np.angle(h))
@@ -201,9 +210,9 @@ if __name__ == "__main__":
 
     handle4 = pyplot.figure()
     pyplot.scatter(np.real(RE_cSymbol),np.imag(RE_cSymbol))
-    pyplot.scatter(np.real(Data_cSymbol),np.imag(Data_cSymbol))
-    pyplot.scatter(np.real(CONSTELLATION['QPSK']),np.imag(CONSTELLATION['QPSK']))
-    pyplot.scatter(np.real(CONSTELLATION[configure.modulation]),np.imag(CONSTELLATION[configure.modulation]))
+    #pyplot.scatter(np.real(Data_cSymbol),np.imag(Data_cSymbol))
+    #pyplot.scatter(np.real(CONSTELLATION['QPSK']),np.imag(CONSTELLATION['QPSK']))
+    #pyplot.scatter(np.real(CONSTELLATION[configure.modulation]),np.imag(CONSTELLATION[configure.modulation]))
     pyplot.ylim(-2,+2)
     pyplot.xlim(-2,+2)
     pyplot.title("DMRS symbol constellation")
